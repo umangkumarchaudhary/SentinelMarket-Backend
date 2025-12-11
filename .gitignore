@@ -45,18 +45,17 @@ logs/
 # Docker
 docker-compose.override.yml
 
-# ML Models
-models/*.pkl
-models/*.h5
-models/*.pt
+# ML Models (keep trained models, ignore cache)
+# models/*.pkl  # Commented out - we want to keep the trained model
 *.joblib
+*.h5
+*.pt
 
-# Data (large files)
+# Data (large files) - but keep training_data.csv
 data/raw/
 data/processed/
-*.csv
+# *.csv  # Commented out - we want to keep training_data.csv
 *.parquet
-*.h5
 
 # Node/React
 node_modules/
