@@ -273,7 +273,7 @@ export interface TrendingStock {
 export async function getTrendingStocks(
   exchange: 'nse' | 'bse' = 'nse',
   limit: number = 10
-): Promise<{ trending: TrendingStock[]; exchange: string; last_updated: string }> {
+): Promise<{ trending: TrendingStock[]; exchange: string; last_updated: string; note?: string }> {
   const params = new URLSearchParams();
   params.append('exchange', exchange);
   params.append('limit', limit.toString());

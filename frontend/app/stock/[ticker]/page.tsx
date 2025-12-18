@@ -199,12 +199,12 @@ export default function StockDetailPage() {
           <div className="mb-4">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-sm font-medium text-gray-600">Risk Score</span>
-              <span className="text-2xl font-bold text-black">{stock.risk_score.toFixed(1)}/100</span>
+              <span className="text-2xl font-bold text-black">{(stock.risk_score ?? 0).toFixed(1)}/100</span>
             </div>
             <div className="h-4 w-full overflow-hidden rounded-full bg-gray-200">
               <div
                 className="h-full bg-red-600 transition-all"
-                style={{ width: `${stock.risk_score}%` }}
+                style={{ width: `${stock.risk_score ?? 0}%` }}
               ></div>
             </div>
           </div>
@@ -240,59 +240,59 @@ export default function StockDetailPage() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Volume Spike</span>
               <span className="font-medium text-black">
-                {stock.individual_scores.volume_spike.toFixed(1)}/100
+                {(stock.individual_scores?.volume_spike ?? 0).toFixed(1)}/100
               </span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
               <div
                 className="h-full bg-blue-600"
-                style={{ width: `${stock.individual_scores.volume_spike}%` }}
+                style={{ width: `${stock.individual_scores?.volume_spike ?? 0}%` }}
               ></div>
             </div>
 
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Price Anomaly</span>
               <span className="font-medium text-black">
-                {stock.individual_scores.price_anomaly.toFixed(1)}/100
+                {(stock.individual_scores?.price_anomaly ?? 0).toFixed(1)}/100
               </span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
               <div
                 className="h-full bg-blue-600"
-                style={{ width: `${stock.individual_scores.price_anomaly}%` }}
+                style={{ width: `${stock.individual_scores?.price_anomaly ?? 0}%` }}
               ></div>
             </div>
 
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">ML Anomaly Detection</span>
               <span className="font-medium text-black">
-                {stock.individual_scores.ml_anomaly.toFixed(1)}/100
+                {(stock.individual_scores?.ml_anomaly ?? 0).toFixed(1)}/100
               </span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
               <div
                 className="h-full bg-blue-600"
-                style={{ width: `${stock.individual_scores.ml_anomaly}%` }}
+                style={{ width: `${stock.individual_scores?.ml_anomaly ?? 0}%` }}
               ></div>
             </div>
 
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Social Sentiment</span>
               <span className="font-medium text-black">
-                {stock.individual_scores.social_sentiment.toFixed(1)}/100
+                {(stock.individual_scores?.social_sentiment ?? 0).toFixed(1)}/100
               </span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
               <div
                 className="h-full bg-blue-600"
-                style={{ width: `${stock.individual_scores.social_sentiment}%` }}
+                style={{ width: `${stock.individual_scores?.social_sentiment ?? 0}%` }}
               ></div>
             </div>
           </div>
         </div>
 
         {/* Red Flags */}
-        {stock.red_flags.length > 0 && (
+        {stock.red_flags && stock.red_flags.length > 0 && (
           <div className="mb-8 rounded-lg border border-red-200 bg-red-50 p-6">
             <h2 className="mb-4 text-xl font-semibold text-red-800">Red Flags</h2>
             <ul className="list-disc space-y-2 pl-5">
@@ -311,29 +311,29 @@ export default function StockDetailPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <p className="text-sm text-gray-600">Current Price</p>
-              <p className="text-2xl font-bold text-black">₹{stock.current_price.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-black">₹{(stock.price ?? 0).toFixed(2)}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600">Price Change</p>
               <p
                 className={`text-2xl font-bold ${
-                  stock.price_change_percent >= 0 ? 'text-green-600' : 'text-red-600'
+                  (stock.price_change_percent ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
                 }`}
               >
-                {stock.price_change_percent >= 0 ? '+' : ''}
-                {stock.price_change_percent.toFixed(2)}%
+                {(stock.price_change_percent ?? 0) >= 0 ? '+' : ''}
+                {(stock.price_change_percent ?? 0).toFixed(2)}%
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-600">Volume</p>
               <p className="text-2xl font-bold text-black">
-                {(stock.volume / 1000000).toFixed(2)}M
+                {((stock.volume ?? 0) / 1000000).toFixed(2)}M
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-600">ML Status</p>
               <p className="text-2xl font-bold text-black">
-                {stock.ml_status.enabled ? '✅ Enabled' : '❌ Disabled'}
+                {stock.ml_status?.enabled ? '✅ Enabled' : '❌ Disabled'}
               </p>
             </div>
           </div>

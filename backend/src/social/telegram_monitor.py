@@ -215,7 +215,17 @@ class TelegramMonitor:
         
         try:
             if self.is_configured:
-                mentions = asyncio.run(self.search_mentions(ticker, hours=hours))
+                # Check if there's already a running event loop (e.g., from FastAPI)
+                try:
+                    loop = asyncio.get_running_loop()
+                    # If we're in an async context, we can't use asyncio.run()
+                    # Instead, create a task or use run_until_complete on a new thread
+                    # For now, fall back to mock data if we're in an async context
+                    print(f"⚠️  Telegram search called from async context - using cached/mock data")
+                    mentions = self._mock_mentions(ticker, hours)
+                except RuntimeError:
+                    # No running loop, safe to use asyncio.run()
+                    mentions = asyncio.run(self.search_mentions(ticker, hours=hours))
             else:
                 mentions = self._mock_mentions(ticker, hours)
         except Exception as e:

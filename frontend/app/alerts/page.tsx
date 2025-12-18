@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { RiskBadge } from '@/components/RiskBadge';
-import { getAlerts, getPredictiveAlerts, type Alert, type PredictiveAlert } from '@/lib/api';
+import { getAlerts, getPredictiveAlerts, type Alert, type PredictiveAlert as PredictiveAlertData } from '@/lib/api';
 import { Exchange } from '@/lib/types';
 import Link from 'next/link';
 import PredictiveAlert from '@/components/PredictiveAlert';
@@ -13,7 +13,7 @@ export default function AlertsPage() {
   const router = useRouter();
   const [exchange, setExchange] = useState<Exchange>('nse');
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [predictiveAlerts, setPredictiveAlerts] = useState<PredictiveAlert[]>([]);
+  const [predictiveAlerts, setPredictiveAlerts] = useState<PredictiveAlertData[]>([]);
   const [activeTab, setActiveTab] = useState<'current' | 'predictive'>('current');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

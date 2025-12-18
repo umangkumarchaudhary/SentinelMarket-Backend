@@ -12,6 +12,7 @@ export default function SocialPage() {
   const [trending, setTrending] = useState<TrendingStock[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isMockData, setIsMockData] = useState(false);
 
   useEffect(() => {
     loadTrending();
@@ -23,6 +24,7 @@ export default function SocialPage() {
     try {
       const data = await getTrendingStocks(exchange, 20);
       setTrending(data.trending);
+      setIsMockData(data.note === 'Mock data');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load trending stocks');
       console.error('Error loading trending stocks:', err);
@@ -41,6 +43,13 @@ export default function SocialPage() {
           <p className="mt-2 text-gray-600">
             Stocks trending on social media for {exchange.toUpperCase()}
           </p>
+          {isMockData && (
+            <div className="mt-2 rounded-lg bg-yellow-50 border border-yellow-200 px-4 py-2">
+              <p className="text-sm text-yellow-800">
+                ⚠️ <strong>Demo Mode:</strong> Showing mock data. Configure Twitter/Telegram APIs for real-time social media data.
+              </p>
+            </div>
+          )}
         </div>
 
         {error && (
@@ -63,7 +72,10 @@ export default function SocialPage() {
           </div>
         ) : trending.length === 0 ? (
           <div className="rounded-lg border border-gray-200 bg-white p-12 text-center">
-            <p className="text-gray-500">No trending stocks at this time</p>
+            <p className="text-gray-500 mb-2">No trending stocks at this time</p>
+            <p className="text-sm text-gray-400">
+              Social media APIs not configured. Configure Twitter/Telegram APIs to see real-time trending stocks.
+            </p>
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
