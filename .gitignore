@@ -8,19 +8,24 @@ env/
 venv/
 ENV/
 .venv
-pip-log.txt
-pip-delete-this-directory.txt
-.pytest_cache/
-.coverage
-htmlcov/
 *.egg-info/
 dist/
 build/
 
+# Node
+node_modules/
+.next/
+out/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
 # Environment variables
 .env
 .env.local
-.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # IDE
 .vscode/
@@ -28,46 +33,24 @@ build/
 *.swp
 *.swo
 *~
-.DS_Store
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# OS
+.DS_Store
+Thumbs.db
 
 # Database
 *.db
 *.sqlite
 *.sqlite3
 
+# Data Lake
+data_lake/
+*.gz
+
 # Logs
-logs/
 *.log
+logs/
 
-# Docker
-docker-compose.override.yml
-
-# ML Models (keep trained models, ignore cache)
-# models/*.pkl  # Commented out - we want to keep the trained model
-*.joblib
-*.h5
-*.pt
-
-# Data (large files) - but keep training_data.csv
-data/raw/
-data/processed/
-# *.csv  # Commented out - we want to keep training_data.csv
-*.parquet
-
-# Node/React
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# Build outputs
-frontend/build/
-frontend/dist/
-
-# OS
-Thumbs.db
-
+# Temporary files
+*.tmp
+*.temp
