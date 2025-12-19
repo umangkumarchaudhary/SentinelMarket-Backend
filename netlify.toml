@@ -7,11 +7,10 @@
   NODE_VERSION = "20"
   NEXT_PUBLIC_API_URL = "https://your-backend-name.onrender.com"
 
-# Redirect all routes to Next.js (for client-side routing)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# Netlify should auto-detect Next.js, but if 404 errors occur,
+# install @netlify/plugin-nextjs in package.json and uncomment below:
+# [[plugins]]
+#   package = "@netlify/plugin-nextjs"
 
 # Headers for API calls
 [[headers]]
