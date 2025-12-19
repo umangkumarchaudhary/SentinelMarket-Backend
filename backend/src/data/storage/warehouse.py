@@ -11,6 +11,7 @@ from sqlalchemy import create_engine, text, MetaData, Table, Column, Integer, St
 from sqlalchemy.dialects.postgresql import JSONB
 from dotenv import load_dotenv
 import logging
+import pandas as pd
 
 load_dotenv()
 
@@ -135,7 +136,10 @@ class DataWarehouse:
             logger.error(f"Error creating tables: {e}")
     
     def insert_stock_data(self, data: List[Dict[str, Any]]):
-        """Insert stock data into warehouse"""
+        """
+        Insert stock data into warehouse
+        Supports both pandas DataFrame and list of dicts
+        """
         if not data:
             return
         
@@ -146,28 +150,55 @@ class DataWarehouse:
             return
         
         try:
-            with self.engine.connect() as conn:
-                for record in data:
-                    raw_data = record.get("raw_data", {})
-                    conn.execute(text("""
-                        INSERT INTO stock_data_warehouse 
-                        (ticker, price, volume, change_percent, timestamp, exchange, source, raw_data)
-                        VALUES (:ticker, :price, :volume, :change_percent, :timestamp, :exchange, :source, :raw_data)
-                    """), {
-                        "ticker": record["ticker"],
-                        "price": float(record["price"]),
-                        "volume": int(record.get("volume", 0)),
-                        "change_percent": float(record.get("change_percent", 0)),
-                        "timestamp": record.get("timestamp", datetime.now()),
-                        "exchange": record.get("exchange", "NSE"),
-                        "source": record.get("source", "api"),
-                        "raw_data": json.dumps(raw_data) if raw_data else None
-                    })
-                conn.commit()
-                logger.info(f"Inserted {len(data)} stock records into warehouse")
+            # Convert to DataFrame for efficient bulk insert
+            if isinstance(data, pd.DataFrame):
+                df = data
+            else:
+                df = pd.DataFrame(data)
+            
+            # Prepare DataFrame columns
+            if 'raw_data' in df.columns:
+                df['raw_data'] = df['raw_data'].apply(lambda x: json.dumps(x) if x else None)
+            
+            # Ensure timestamp is datetime
+            if 'timestamp' in df.columns:
+                df['timestamp'] = pd.to_datetime(df['timestamp'])
+            
+            # Use pandas to_sql for bulk insert (more efficient)
+            df.to_sql(
+                'stock_data_warehouse',
+                self.engine,
+                if_exists='append',
+                index=False,
+                method='multi'
+            )
+            logger.info(f"Inserted {len(df)} stock records into warehouse using pandas")
         except Exception as e:
-            logger.error(f"Error inserting stock data: {e}")
-            raise
+            # Fallback to row-by-row insert if pandas fails
+            logger.warning(f"Pandas bulk insert failed, using row-by-row: {e}")
+            try:
+                with self.engine.connect() as conn:
+                    for record in data:
+                        raw_data = record.get("raw_data", {})
+                        conn.execute(text("""
+                            INSERT INTO stock_data_warehouse 
+                            (ticker, price, volume, change_percent, timestamp, exchange, source, raw_data)
+                            VALUES (:ticker, :price, :volume, :change_percent, :timestamp, :exchange, :source, :raw_data)
+                        """), {
+                            "ticker": record["ticker"],
+                            "price": float(record["price"]),
+                            "volume": int(record.get("volume", 0)),
+                            "change_percent": float(record.get("change_percent", 0)),
+                            "timestamp": record.get("timestamp", datetime.now()),
+                            "exchange": record.get("exchange", "NSE"),
+                            "source": record.get("source", "api"),
+                            "raw_data": json.dumps(raw_data) if raw_data else None
+                        })
+                    conn.commit()
+                    logger.info(f"Inserted {len(data)} stock records into warehouse")
+            except Exception as e2:
+                logger.error(f"Error inserting stock data: {e2}")
+                raise
     
     def insert_social_mentions(self, data: List[Dict[str, Any]]):
         """Insert social media mentions into warehouse"""
@@ -205,32 +236,39 @@ class DataWarehouse:
             logger.error(f"Error inserting social mentions: {e}")
             raise
     
-    def get_historical_stock_data(self, ticker: str, days: int = 30) -> List[Dict]:
-        """Query historical stock data"""
+    def get_historical_stock_data(self, ticker: str, days: int = 30) -> pd.DataFrame:
+        """
+        Query historical stock data
+        Returns pandas DataFrame for easy analysis
+        """
         if not self.engine:
-            # Return from in-memory storage
+            # Return from in-memory storage as DataFrame
             cutoff = datetime.now() - timedelta(days=days)
-            return [
+            records = [
                 r for r in self._in_memory_storage["stock_data"]
                 if r["ticker"] == ticker and 
                 datetime.fromisoformat(r["timestamp"].replace('Z', '+00:00')) >= cutoff
             ]
+            return pd.DataFrame(records) if records else pd.DataFrame()
         
         try:
-            with self.engine.connect() as conn:
-                result = conn.execute(text("""
-                    SELECT ticker, price, volume, change_percent, timestamp, exchange, source
-                    FROM stock_data_warehouse
-                    WHERE ticker = :ticker
-                    AND timestamp >= NOW() - INTERVAL ':days days'
-                    ORDER BY timestamp DESC
-                """), {"ticker": ticker, "days": days})
-                
-                rows = result.fetchall()
-                return [dict(row._mapping) for row in rows]
+            # Use pandas read_sql for efficient querying
+            query = """
+                SELECT ticker, price, volume, change_percent, timestamp, exchange, source
+                FROM stock_data_warehouse
+                WHERE ticker = :ticker
+                AND timestamp >= NOW() - INTERVAL ':days days'
+                ORDER BY timestamp DESC
+            """
+            df = pd.read_sql(
+                query,
+                self.engine,
+                params={"ticker": ticker, "days": days}
+            )
+            return df
         except Exception as e:
             logger.error(f"Error querying historical data: {e}")
-            return []
+            return pd.DataFrame()
     
     def get_recent_social_mentions(self, ticker: Optional[str] = None, hours: int = 24) -> List[Dict]:
         """Query recent social media mentions"""
@@ -265,6 +303,32 @@ class DataWarehouse:
                 return [dict(row._mapping) for row in rows]
         except Exception as e:
             logger.error(f"Error querying social mentions: {e}")
+            return []
+    
+    def get_recent_stock_data(self, hours: int = 24) -> List[Dict[str, Any]]:
+        """Query recent stock data across all tickers"""
+        if not self.engine:
+            cutoff = datetime.now() - timedelta(hours=hours)
+            return [
+                r
+                for r in self._in_memory_storage["stock_data"]
+                if datetime.fromisoformat(r["timestamp"].replace("Z", "+00:00")) >= cutoff
+            ]
+        
+        try:
+            with self.engine.connect() as conn:
+                query = """
+                    SELECT ticker, price, volume, change_percent, timestamp, exchange, source
+                    FROM stock_data_warehouse
+                    WHERE timestamp >= NOW() - INTERVAL ':hours hours'
+                    ORDER BY timestamp DESC
+                    LIMIT 5000
+                """
+                result = conn.execute(text(query), {"hours": hours})
+                rows = result.fetchall()
+                return [dict(row._mapping) for row in rows]
+        except Exception as e:
+            logger.error(f"Error querying recent stock data: {e}")
             return []
     
     def get_warehouse_stats(self) -> Dict[str, Any]:

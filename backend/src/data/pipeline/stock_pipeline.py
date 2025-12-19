@@ -71,10 +71,14 @@ class StockDataPipeline(BasePipeline):
     def extract(self) -> List[Dict[str, Any]]:
         """
         Extract stock data from API sources
+        Also stores raw data in data lake for audit trail
         
         Returns:
             List of raw stock data records
         """
+        from ..storage.data_lake import DataLake
+        
+        data_lake = DataLake()
         data = []
         
         for ticker in self.stocks:
@@ -82,6 +86,17 @@ class StockDataPipeline(BasePipeline):
                 # Fetch from NSE using StockDataFetcher
                 # The fetcher returns data in a specific format
                 raw_data = self.fetcher.fetch_stock_data(ticker, "nse")
+                
+                # Store raw data in data lake
+                try:
+                    data_lake.store_raw_data(
+                        source="nse_api",
+                        data={"ticker": ticker, "raw_response": raw_data},
+                        timestamp=datetime.now()
+                    )
+                except Exception as e:
+                    self.logger.warning(f"Failed to store in data lake: {e}")
+                
                 # Transform to our format
                 stock_data = {
                     "ticker": ticker,
@@ -114,17 +129,16 @@ class StockDataPipeline(BasePipeline):
         Returns:
             List of transformed, validated records
         """
-        transformed = []
+        from src.data.validation import DataValidator
+
+        validator = DataValidator()
+        transformed: List[Dict[str, Any]] = []
         
         for record in data:
             try:
-                # Validate required fields
-                if not record.get("ticker"):
-                    self.logger.warning(f"Record missing ticker: {record}")
-                    continue
-                
-                if not record.get("price") or float(record.get("price", 0)) <= 0:
-                    self.logger.warning(f"Invalid price for {record.get('ticker')}")
+                # Use shared validator
+                if not validator.validate_stock_record(record):
+                    self.logger.warning(f"[validation] Invalid stock record: {record.get('ticker')}")
                     continue
                 
                 # Transform to standardized format
@@ -138,14 +152,10 @@ class StockDataPipeline(BasePipeline):
                     "source": record.get("source", "api"),
                     "processed_at": datetime.now().isoformat(),
                     # Store raw data for audit trail
-                    "raw_data": record
+                    "raw_data": record,
                 }
                 
-                # Additional validations
-                if transformed_record["price"] > 0 and transformed_record["volume"] >= 0:
-                    transformed.append(transformed_record)
-                else:
-                    self.logger.warning(f"Validation failed for {transformed_record['ticker']}")
+                transformed.append(transformed_record)
                     
             except (ValueError, TypeError, KeyError) as e:
                 self.logger.warning(f"Transform error for record: {str(e)[:50]}")

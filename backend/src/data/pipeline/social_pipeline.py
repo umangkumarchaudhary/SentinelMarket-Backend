@@ -49,10 +49,14 @@ class SocialMediaPipeline(BasePipeline):
     def extract(self) -> List[Dict[str, Any]]:
         """
         Extract social media mentions from Twitter and Telegram
+        Also stores raw data in data lake for audit trail
         
         Returns:
             List of raw social media mentions
         """
+        from ..storage.data_lake import DataLake
+        
+        data_lake = DataLake()
         all_mentions = []
         
         # Lazy import social modules
@@ -104,6 +108,16 @@ class SocialMediaPipeline(BasePipeline):
                         )
                         loop.close()
                     
+                    # Store raw Telegram data in data lake
+                    try:
+                        data_lake.store_raw_data(
+                            source="telegram",
+                            data={"ticker": ticker, "raw_mentions": mentions},
+                            timestamp=datetime.now()
+                        )
+                    except Exception as e:
+                        self.logger.warning(f"Failed to store Telegram data in data lake: {e}")
+                    
                     for mention in mentions:
                         mention["ticker"] = ticker
                         mention["platform"] = "telegram"
@@ -127,18 +141,29 @@ class SocialMediaPipeline(BasePipeline):
         Returns:
             List of transformed mentions
         """
-        transformed = []
+        from src.data.validation import DataValidator
+
+        validator = DataValidator()
+        transformed: List[Dict[str, Any]] = []
         
         for record in data:
             try:
-                # Validate required fields
+                # Use shared validator
+                # Build a minimal view for validation
+                text_val = record.get("text", "") or record.get("message", "")
+                social_view = {
+                    "text": text_val,
+                    "platform": record.get("platform"),
+                    "timestamp": record.get("created_at") or record.get("timestamp") or datetime.now().isoformat(),
+                }
+                if not validator.validate_social_record(social_view):
+                    continue
+                
+                # Validate ticker/platform presence
                 if not record.get("ticker") or not record.get("platform"):
                     continue
                 
-                # Extract text
-                text = record.get("text", "") or record.get("message", "")
-                if not text or len(text) < 5:
-                    continue
+                text = text_val
                 
                 # Determine sentiment (simple keyword-based)
                 text_lower = text.lower()
@@ -164,15 +189,15 @@ class SocialMediaPipeline(BasePipeline):
                     "sentiment": sentiment,
                     "is_pump_signal": is_pump_signal,
                     "channel": record.get("channel") or record.get("username", "unknown"),
-                    "timestamp": record.get("created_at") or record.get("timestamp") or datetime.now().isoformat(),
+                    "timestamp": social_view["timestamp"],
                     "views": record.get("views", 0) or record.get("likes", 0),
                     "processed_at": datetime.now().isoformat(),
                     # Store metadata
                     "metadata": {
                         "author_id": record.get("author_id"),
                         "has_media": record.get("has_media", False),
-                        "raw_data": {k: v for k, v in record.items() if k not in ["text", "message"]}
-                    }
+                        "raw_data": {k: v for k, v in record.items() if k not in ["text", "message"]},
+                    },
                 }
                 
                 transformed.append(transformed_record)
