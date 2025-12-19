@@ -47,6 +47,12 @@ export function Header({ exchange, onExchangeChange }: HeaderProps) {
             >
               Social
             </Link>
+            <Link
+              href="/pipelines"
+              className="text-sm font-medium text-black hover:text-red-600"
+            >
+              Pipelines
+            </Link>
 
             {/* Exchange Toggle */}
             <ExchangeToggle

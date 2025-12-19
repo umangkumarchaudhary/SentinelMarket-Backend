@@ -8,6 +8,9 @@ interface Mention {
   likes?: number;
   retweets?: number;
   is_pump_signal?: boolean;
+  channel?: string; // Telegram channel name
+  has_media?: boolean; // Telegram media indicator
+  views?: number; // Telegram views
 }
 
 interface SocialFeedProps {
@@ -43,19 +46,33 @@ export default function SocialFeed({ mentions, platform }: SocialFeedProps) {
             }`}
           >
             <div className="flex justify-between items-start mb-2">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-medium text-gray-700">
-                  {mention.username || 'Anonymous'}
+                  {platform === 'telegram' && mention.channel 
+                    ? `@${mention.channel}` 
+                    : mention.username || 'Anonymous'}
                 </span>
                 {mention.is_pump_signal && (
-                  <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
+                  <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded font-semibold">
                     ⚠️ Pump Signal
                   </span>
                 )}
+                {platform === 'telegram' && mention.has_media && (
+                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                    📷 Media
+                  </span>
+                )}
               </div>
-              <span className="text-xs text-gray-500">
-                {new Date(mention.created_at).toLocaleDateString()}
-              </span>
+              <div className="text-right">
+                <span className="text-xs text-gray-500 block">
+                  {new Date(mention.created_at).toLocaleDateString()}
+                </span>
+                {platform === 'telegram' && mention.views !== undefined && (
+                  <span className="text-xs text-gray-400">
+                    👁️ {mention.views}
+                  </span>
+                )}
+              </div>
             </div>
             <p className="text-sm text-gray-800 mb-2">{mention.text}</p>
             {platform === 'twitter' && (

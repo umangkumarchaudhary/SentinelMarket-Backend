@@ -3,12 +3,32 @@ FastAPI Backend for SentinelMarket
 Main API server
 """
 
+import sys
+import os
+
+# CRITICAL: Set up paths BEFORE any imports that use 'src'
+# Add backend directory to path for imports (must be first!)
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+
+# Add SentinelMarket to path (if exists) - this is where the original ML code lives
+# IMPORTANT: keep backend_dir (which contains our ETL 'src') *ahead* of SentinelMarket
+# so that `import src.data.pipeline...` resolves to backend/src, not SentinelMarket/src.
+sentinel_path = os.path.join(os.path.dirname(__file__), '..', 'SentinelMarket')
+if os.path.exists(sentinel_path):
+    if sentinel_path not in sys.path:
+        # Append so it has lower priority than backend_dir
+        sys.path.append(sentinel_path)
+    print(f"[PATH] Added SentinelMarket to path (low priority): {sentinel_path}")
+else:
+    print(f"[PATH] SentinelMarket path not found: {sentinel_path}")
+
+# Now import standard libraries
 from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from typing import List, Optional
-import sys
-import os
 from datetime import datetime
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
@@ -16,13 +36,28 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Add SentinelMarket to path
-sentinel_path = os.path.join(os.path.dirname(__file__), '..', 'SentinelMarket')
-sys.path.append(sentinel_path)
-
 # Import ML modules (type: ignore for linter - path is added dynamically)
-from src.data.stock_data_fetcher import StockDataFetcher  # type: ignore
-from src.detectors.risk_scorer import RiskScorer  # type: ignore
+# These are in SentinelMarket/src, not backend/src
+try:
+    from src.data.stock_data_fetcher import StockDataFetcher  # type: ignore
+    from src.detectors.risk_scorer import RiskScorer  # type: ignore
+    print("[ML] ML modules imported successfully")
+except ImportError as e:
+    print(f"[ML] Could not import ML modules: {e}")
+    import traceback
+    traceback.print_exc()
+    # Create fallback classes to prevent complete failure
+    class StockDataFetcher:
+        def __init__(self, market_suffix=""):
+            self.market_suffix = market_suffix
+        def fetch_stock_data(self, ticker, exchange="nse"):
+            return {"ticker": ticker, "price": 0, "volume": 0}
+    
+    class RiskScorer:
+        def __init__(self, *args, **kwargs):
+            pass
+        def calculate_risk_score(self, *args, **kwargs):
+            return {"risk_score": 0}
 
 # Import database (optional - will work without it)
 try:
@@ -33,15 +68,61 @@ except ImportError:
     print("⚠️  Database module not available - running without database")
 
 # Import social media monitoring (optional)
+# NOTE: On Windows, importing transformers/torch for Twitter can raise DLL OSErrors.
+# We catch any exception here so the rest of the app (and Telegram, ETL, etc.) still work.
 try:
-    import sys
     social_path = os.path.join(os.path.dirname(__file__), 'src', 'social')
-    sys.path.append(os.path.dirname(__file__))
+    if os.path.dirname(__file__) not in sys.path:
+        sys.path.append(os.path.dirname(__file__))
     from src.social import twitter_monitor, telegram_monitor
     SOCIAL_AVAILABLE = True
-except ImportError as e:
+except Exception as e:
     SOCIAL_AVAILABLE = False
-    print(f"⚠️  Social media monitoring not available: {e}")
+    print(f"[SOCIAL] Social media monitoring not available (transformers/torch issue): {e}")
+
+# Import data engineering modules (optional)
+# Path is already set up above, so imports should work now
+try:
+    from src.data.pipeline.stock_pipeline import StockDataPipeline
+    from src.data.storage.warehouse import DataWarehouse
+    from src.data.scheduler.pipeline_scheduler import PipelineScheduler
+    from src.data.monitoring.pipeline_monitor import PipelineMonitor
+    
+    # Try to import social pipeline (may fail due to PyTorch DLL issues)
+    # Skip it if it fails - stock pipeline is more important
+    SOCIAL_PIPELINE_AVAILABLE = False
+    SocialMediaPipeline = None
+    try:
+        from src.data.pipeline.social_pipeline import SocialMediaPipeline
+        SOCIAL_PIPELINE_AVAILABLE = True
+    except (ImportError, OSError, Exception) as e:
+        # PyTorch DLL errors on Windows - skip social pipeline
+        SOCIAL_PIPELINE_AVAILABLE = False
+        SocialMediaPipeline = None
+        print(f"[PIPELINES] Social pipeline skipped (PyTorch/DLL issue): {type(e).__name__}")
+    
+    DATA_ENGINEERING_AVAILABLE = True
+    
+    # Initialize scheduler and monitor
+    pipeline_scheduler = PipelineScheduler()
+    pipeline_monitor = PipelineMonitor()
+    print("[PIPELINES] Data engineering modules loaded successfully")
+    if not SOCIAL_PIPELINE_AVAILABLE:
+        print("[PIPELINES] Note: Social media pipeline unavailable (PyTorch issue), but other pipelines work")
+except ImportError as e:
+    DATA_ENGINEERING_AVAILABLE = False
+    pipeline_scheduler = None
+    pipeline_monitor = None
+    print(f"[PIPELINES] Data engineering modules not available: {e}")
+    import traceback
+    traceback.print_exc()
+except Exception as e:
+    DATA_ENGINEERING_AVAILABLE = False
+    pipeline_scheduler = None
+    pipeline_monitor = None
+    print(f"[PIPELINES] Data engineering modules failed to load: {e}")
+    import traceback
+    traceback.print_exc()
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -84,6 +165,18 @@ async def startup_event():
             print("[WARNING] Database connection failed - running without database")
     else:
         print("[INFO] Running without database (database module not available)")
+    
+    # Verify Telegram monitor is using correct channels
+    if SOCIAL_AVAILABLE:
+        # FORCE update channels to the correct ones (in case old instance is cached)
+        # User's actual Telegram channels (update these if needed):
+        # https://t.me/Stock_Gainerss_2
+        # https://t.me/hindustan_om_unique_traders
+        correct_channels = ['Stock_Gainerss_2', 'hindustan_om_unique_traders','stockmarkettradingproject']
+        print(f"🔍 [Startup] OLD Telegram monitor channels: {telegram_monitor.default_channels}")
+        telegram_monitor.default_channels = correct_channels
+        print(f"✅ [Startup] UPDATED Telegram monitor channels to: {telegram_monitor.default_channels}")
+        print(f"🔍 [Startup] Telegram monitor configured: {telegram_monitor.is_configured}")
 
 # Popular NSE and BSE stocks for demo
 POPULAR_NSE_STOCKS = [
@@ -603,31 +696,85 @@ async def get_stock_social(
     hours: Optional[int] = Query(24, ge=1, le=168, description="Hours to look back")
 ):
     """Get social media data for a stock"""
+    print(f"🌐 [API] /api/stocks/{ticker}/social called")
+    
     try:
         if not SOCIAL_AVAILABLE:
+            print("⚠️  [API] Social media not available - returning mock data")
             return {
                 "ticker": ticker,
                 "twitter": twitter_monitor.get_stock_social_data(ticker, hours=hours),
-                "telegram": telegram_monitor.get_stock_social_data(ticker, hours=hours),
+                "telegram": telegram_monitor._mock_mentions(ticker, hours),
                 "note": "Social media monitoring not fully configured - showing mock data"
             }
         
+        print(f"📱 [API] Fetching Twitter data for {ticker}...")
         twitter_data = twitter_monitor.get_stock_social_data(ticker, hours=hours)
-        telegram_data = telegram_monitor.get_stock_social_data(ticker, hours=hours)
+        print(f"✅ [API] Twitter data fetched: {twitter_data.get('mention_count', 0)} mentions")
         
-        # Calculate combined hype score
-        twitter_hype = twitter_data.get('hype_score', 0)
+        print(f"📱 [API] Fetching Telegram data for {ticker}...")
+        # Use async version for Telegram
+        if hasattr(telegram_monitor, 'get_stock_social_data_async'):
+            telegram_data = await telegram_monitor.get_stock_social_data_async(ticker, hours=hours)
+        else:
+            print("⚠️  [API] ⚠️⚠️⚠️ BACKEND NEEDS RESTART ⚠️⚠️⚠️")
+            print("⚠️  [API] The async method is not loaded. Please restart the backend server.")
+            print("⚠️  [API] Using direct search_mentions call as fallback...")
+            # Direct fallback: call search_mentions and format the result
+            try:
+                print(f"  🔍 [API] Calling search_mentions for {ticker} with hours={hours}...")
+                print(f"  🔍 [API] Telegram monitor channels before call: {telegram_monitor.default_channels}")
+                mentions = await telegram_monitor.search_mentions(ticker, channel_usernames=None, hours=hours)
+                print(f"  📊 [API] search_mentions returned {len(mentions)} mentions")
+                if mentions:
+                    print(f"  📋 [API] First mention: {mentions[0].get('text', '')[:50]}... from channel: {mentions[0].get('channel', 'unknown')}")
+                pump_signals = [m for m in mentions if m.get('is_pump_signal', False)]
+                coordination = telegram_monitor.detect_coordination(mentions)
+                channels = list(set(m.get('channel', 'unknown') for m in mentions))
+                telegram_data = {
+                    'ticker': ticker,
+                    'mention_count': len(mentions),
+                    'pump_signal_count': len(pump_signals),
+                    'coordination': coordination,
+                    'channels': channels,
+                    'recent_mentions': mentions[:10]
+                }
+            except Exception as e:
+                print(f"❌ [API] Fallback also failed: {e}")
+                import traceback
+                traceback.print_exc()
+                # Last resort: mock data
+                mentions = telegram_monitor._mock_mentions(ticker, hours)
+                telegram_data = {
+                    'ticker': ticker,
+                    'mention_count': len(mentions),
+                    'pump_signal_count': len([m for m in mentions if m.get('is_pump_signal', False)]),
+                    'coordination': {'is_coordinated': False, 'coordination_score': 0},
+                    'channels': list(set(m.get('channel', 'unknown') for m in mentions)),
+                    'recent_mentions': mentions[:10]
+                }
+        print(f"✅ [API] Telegram data fetched: {telegram_data.get('mention_count', 0)} mentions")
+        
+        # Calculate combined hype score (only Telegram for now, skip Twitter)
         telegram_hype = telegram_data.get('pump_signal_count', 0) * 10  # Scale to 0-100
-        combined_hype = (twitter_hype * 0.6 + min(telegram_hype, 100) * 0.4)
+        combined_hype = min(telegram_hype, 100)  # Use only Telegram for now
         
-        return {
+        print(f"📊 [API] Combined hype score: {combined_hype}")
+        
+        result = {
             "ticker": ticker,
-            "twitter": twitter_data,
+            "twitter": twitter_data,  # Keep for compatibility but will be mock
             "telegram": telegram_data,
             "combined_hype_score": round(combined_hype, 2),
             "last_updated": datetime.now().isoformat()
         }
+        
+        print(f"✅ [API] Returning social data for {ticker}")
+        return result
     except Exception as e:
+        print(f"❌ [API] Error fetching social data: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error fetching social data: {str(e)}")
 
 
@@ -648,12 +795,59 @@ async def get_trending_stocks(
         for ticker in stocks_to_check:
             try:
                 if SOCIAL_AVAILABLE:
-                    twitter_data = twitter_monitor.get_stock_social_data(ticker, hours=24)
-                    telegram_data = telegram_monitor.get_stock_social_data(ticker, hours=24)
-                    hype_score = (twitter_data.get('hype_score', 0) * 0.6 + 
-                                 min(telegram_data.get('pump_signal_count', 0) * 10, 100) * 0.4)
-                    twitter_mentions = twitter_data.get('mention_count', 0)
-                    telegram_signals = telegram_data.get('pump_signal_count', 0)
+                    print(f"📊 [API] Checking trending for {ticker}...")
+                    try:
+                        twitter_data = twitter_monitor.get_stock_social_data(ticker, hours=24)
+                        print(f"  📱 [API] Twitter done for {ticker}")
+                        
+                        # Debug: Check what channels the monitor has
+                        print(f"  🔍 [API] Telegram monitor default_channels: {telegram_monitor.default_channels}")
+                        print(f"  🔍 [API] Telegram monitor is_configured: {telegram_monitor.is_configured}")
+                        
+                        # Try async method, fallback to direct call
+                        if hasattr(telegram_monitor, 'get_stock_social_data_async'):
+                            print(f"  📱 [API] Calling async Telegram method for {ticker}...")
+                            telegram_data = await telegram_monitor.get_stock_social_data_async(ticker, hours=24)
+                        else:
+                            print(f"  ⚠️  [API] Async method not found, using direct search_mentions for {ticker}...")
+                            # Force use of hardcoded channels by explicitly passing None
+                            try:
+                                print(f"  🔍 [API] About to call search_mentions for {ticker}...")
+                                mentions = await telegram_monitor.search_mentions(ticker, channel_usernames=None, hours=24)
+                                print(f"  📊 [API] search_mentions returned {len(mentions)} mentions for {ticker}")
+                            except Exception as e:
+                                print(f"  ❌ [API] Error in search_mentions for {ticker}: {e}")
+                                import traceback
+                                traceback.print_exc()
+                                mentions = []
+                            
+                            pump_signals = [m for m in mentions if m.get('is_pump_signal', False)]
+                            coordination = telegram_monitor.detect_coordination(mentions)
+                            channels = list(set(m.get('channel', 'unknown') for m in mentions))
+                            telegram_data = {
+                                'ticker': ticker,
+                                'mention_count': len(mentions),
+                                'pump_signal_count': len(pump_signals),
+                                'coordination': coordination,
+                                'channels': channels,
+                                'recent_mentions': mentions[:10]
+                            }
+                        
+                        print(f"  ✅ [API] Telegram done for {ticker}: {telegram_data.get('mention_count', 0)} mentions")
+                        
+                        # Use only Telegram for hype score (skip Twitter)
+                        hype_score = min(telegram_data.get('pump_signal_count', 0) * 10, 100)
+                        twitter_mentions = twitter_data.get('mention_count', 0)
+                        telegram_signals = telegram_data.get('pump_signal_count', 0)
+                        print(f"  ✅ {ticker}: Hype={hype_score}, Telegram={telegram_signals}, Mentions={telegram_data.get('mention_count', 0)}")
+                    except Exception as e:
+                        print(f"  ❌ [API] Error checking {ticker}: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        # Fallback to mock
+                        hype_score = random.uniform(20, 60)
+                        twitter_mentions = 0
+                        telegram_signals = 0
                 else:
                     # Generate mock data for demo purposes
                     # Simulate some stocks with varying hype levels
@@ -669,14 +863,15 @@ async def get_trending_stocks(
                     twitter_mentions = int(hype_score * random.uniform(0.5, 2))
                     telegram_signals = int(hype_score * random.uniform(0.1, 0.5))
                 
-                # Include stocks with hype_score > 15 (lower threshold to show more results)
-                if hype_score > 15:
-                    trending.append({
-                        "ticker": ticker,
-                        "hype_score": round(hype_score, 2),
-                        "twitter_mentions": twitter_mentions,
-                        "telegram_signals": telegram_signals
-                    })
+                # Include all stocks (even with 0 hype) so we can see what's happening
+                # Filter by hype_score > 0 or show top N regardless
+                trending.append({
+                    "ticker": ticker,
+                    "hype_score": round(hype_score, 2),
+                    "twitter_mentions": twitter_mentions,
+                    "telegram_signals": telegram_signals
+                })
+                print(f"  📝 [API] Added {ticker} to trending list (hype={round(hype_score, 2)})")
             except Exception as e:
                 # Skip stocks that fail, but continue processing
                 continue
@@ -684,8 +879,19 @@ async def get_trending_stocks(
         # Sort by hype score (highest first)
         trending.sort(key=lambda x: x['hype_score'], reverse=True)
         
-        # Return top trending stocks
-        result = trending[:limit]
+        # Return top trending stocks (filter out 0 hype if we have many results)
+        if len(trending) > limit:
+            # If we have many results, filter out 0 hype scores
+            result = [t for t in trending if t['hype_score'] > 0][:limit]
+            if len(result) < limit:
+                # If not enough with hype > 0, include some with 0 hype
+                result = trending[:limit]
+        else:
+            result = trending
+        
+        print(f"📊 [API] Returning {len(result)} trending stocks (out of {len(trending)} checked)")
+        for stock in result[:5]:  # Log first 5
+            print(f"  - {stock['ticker']}: Hype={stock['hype_score']}, Telegram={stock['telegram_signals']}")
         
         return {
             "trending": result,
@@ -1057,6 +1263,165 @@ async def get_predictive_alerts(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching predictive alerts: {str(e)}")
 
+
+# ============================================================================
+# DATA ENGINEERING API ENDPOINTS
+# ============================================================================
+
+@app.get("/api/data/pipelines")
+async def list_pipelines():
+    """List available data pipelines"""
+    if not DATA_ENGINEERING_AVAILABLE:
+        return {"error": "Data engineering modules not available"}
+    
+    pipelines = [
+        {
+            "name": "stock_data",
+            "description": "ETL pipeline for stock price data",
+            "source": "NSE/BSE APIs",
+            "frequency": "Every 5 minutes",
+            "status": "available"
+        }
+    ]
+    
+    # Add social pipeline if available
+    if SOCIAL_PIPELINE_AVAILABLE:
+        pipelines.append({
+            "name": "social_media",
+            "description": "ETL pipeline for social media mentions",
+            "source": "Twitter & Telegram",
+            "frequency": "Every 10 minutes",
+            "status": "available"
+        })
+    else:
+        pipelines.append({
+            "name": "social_media",
+            "description": "ETL pipeline for social media mentions",
+            "source": "Twitter & Telegram",
+            "frequency": "Every 10 minutes",
+            "status": "unavailable",
+            "reason": "PyTorch DLL issue - will work when PyTorch is fixed"
+        })
+    
+    return {"pipelines": pipelines}
+
+@app.post("/api/data/pipelines/{pipeline_name}/run")
+async def run_pipeline(pipeline_name: str):
+    """Manually trigger a data pipeline"""
+    if not DATA_ENGINEERING_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Data engineering modules not available")
+    
+    try:
+        if pipeline_name == "stock_data":
+            pipeline = StockDataPipeline()
+        elif pipeline_name == "social_media":
+            if not SOCIAL_PIPELINE_AVAILABLE or SocialMediaPipeline is None:
+                raise HTTPException(
+                    status_code=503, 
+                    detail="Social media pipeline not available due to PyTorch DLL issue. Stock pipeline is working."
+                )
+            pipeline = SocialMediaPipeline()
+        else:
+            raise HTTPException(status_code=404, detail=f"Pipeline '{pipeline_name}' not found")
+        
+        result = pipeline.run()
+        
+        # Record in monitor
+        if pipeline_monitor:
+            pipeline_monitor.record_pipeline_run(pipeline_name, result)
+        
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Pipeline execution failed: {str(e)}")
+
+@app.get("/api/data/pipelines/{pipeline_name}/status")
+async def get_pipeline_status(pipeline_name: str):
+    """Get status and health of a pipeline"""
+    if not DATA_ENGINEERING_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Data engineering modules not available")
+    
+    if not pipeline_monitor:
+        return {"error": "Pipeline monitor not available"}
+    
+    health = pipeline_monitor.get_pipeline_health(pipeline_name)
+    return health
+
+@app.get("/api/data/pipelines/health")
+async def get_all_pipeline_health():
+    """Get health status of all pipelines"""
+    if not DATA_ENGINEERING_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Data engineering modules not available")
+    
+    if not pipeline_monitor:
+        return {"error": "Pipeline monitor not available"}
+    
+    return pipeline_monitor.get_all_health()
+
+@app.get("/api/data/pipelines/scheduler/status")
+async def get_scheduler_status():
+    """Get pipeline scheduler status"""
+    if not DATA_ENGINEERING_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Data engineering modules not available")
+    
+    if not pipeline_scheduler:
+        return {"error": "Pipeline scheduler not available"}
+    
+    return pipeline_scheduler.get_status()
+
+@app.get("/api/data/warehouse/stats")
+async def get_warehouse_stats():
+    """Get data warehouse statistics"""
+    if not DATA_ENGINEERING_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Data engineering modules not available")
+    
+    try:
+        warehouse = DataWarehouse()
+        stats = warehouse.get_warehouse_stats()
+        return stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get warehouse stats: {str(e)}")
+
+@app.get("/api/data/warehouse/historical/{ticker}")
+async def get_historical_data(
+    ticker: str,
+    days: int = Query(30, ge=1, le=365, description="Number of days of historical data")
+):
+    """Get historical stock data from warehouse"""
+    if not DATA_ENGINEERING_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Data engineering modules not available")
+    
+    try:
+        warehouse = DataWarehouse()
+        data = warehouse.get_historical_stock_data(ticker.upper(), days)
+        return {
+            "ticker": ticker.upper(),
+            "days": days,
+            "records": len(data),
+            "data": data
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get historical data: {str(e)}")
+
+@app.get("/api/data/warehouse/social/{ticker}")
+async def get_warehouse_social_mentions(
+    ticker: str,
+    hours: int = Query(24, ge=1, le=168, description="Hours to look back")
+):
+    """Get social media mentions from warehouse"""
+    if not DATA_ENGINEERING_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Data engineering modules not available")
+    
+    try:
+        warehouse = DataWarehouse()
+        mentions = warehouse.get_recent_social_mentions(ticker.upper(), hours)
+        return {
+            "ticker": ticker.upper(),
+            "hours": hours,
+            "records": len(mentions),
+            "mentions": mentions
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get social mentions: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
