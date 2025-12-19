@@ -1,16 +1,15 @@
 [build]
   base = "frontend"
   command = "npm install && npm run build"
-  publish = ".next"
+  # Don't specify publish - Netlify Next.js plugin handles it
 
 [build.environment]
   NODE_VERSION = "20"
   NEXT_PUBLIC_API_URL = "https://your-backend-name.onrender.com"
 
-# Netlify should auto-detect Next.js, but if 404 errors occur,
-# install @netlify/plugin-nextjs in package.json and uncomment below:
-# [[plugins]]
-#   package = "@netlify/plugin-nextjs"
+# Netlify Next.js plugin - REQUIRED for Next.js 16 App Router
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
 # Headers for API calls
 [[headers]]
