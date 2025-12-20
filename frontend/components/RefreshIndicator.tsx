@@ -26,16 +26,26 @@ export function RefreshIndicator({
   };
 
   return (
-    <div className="flex items-center gap-2 text-sm text-gray-600">
+    <div
+      className="flex items-center gap-2 text-sm"
+      style={{ color: 'var(--foreground-muted)' }}
+    >
       {isRefreshing ? (
         <>
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-red-600"></div>
+          <div
+            className="h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"
+            style={{ borderColor: 'var(--border)', borderTopColor: 'var(--accent)' }}
+          />
           <span>Refreshing...</span>
         </>
       ) : (
         <>
-          <div className="h-2 w-2 rounded-full bg-green-500"></div>
-          <span>Last updated: {formatTime(lastRefresh)}</span>
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-50 animate-ping" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+          </span>
+          <span className="hidden sm:inline">Updated: {formatTime(lastRefresh)}</span>
+          <span className="sm:hidden">{formatTime(lastRefresh)}</span>
         </>
       )}
     </div>

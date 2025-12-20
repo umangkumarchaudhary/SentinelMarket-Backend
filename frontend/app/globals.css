@@ -1,8 +1,42 @@
 @import "tailwindcss";
 
+/* Theme CSS Variables */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Light Theme (default) */
+  --background: #f4f4f5;
+  --background-secondary: #ffffff;
+  --background-tertiary: #fafafa;
+  --foreground: #09090b;
+  --foreground-secondary: #3f3f46;
+  --foreground-muted: #71717a;
+  --border: #e4e4e7;
+  --border-subtle: #f4f4f5;
+  --card-bg: rgba(255, 255, 255, 0.8);
+  --card-border: rgba(228, 228, 231, 0.5);
+  --accent: #dc2626;
+  --accent-hover: #b91c1c;
+  --success: #16a34a;
+  --warning: #ca8a04;
+  --danger: #dc2626;
+}
+
+.dark {
+  /* Dark Theme */
+  --background: #09090b;
+  --background-secondary: #18181b;
+  --background-tertiary: #27272a;
+  --foreground: #fafafa;
+  --foreground-secondary: #a1a1aa;
+  --foreground-muted: #71717a;
+  --border: #27272a;
+  --border-subtle: #3f3f46;
+  --card-bg: rgba(24, 24, 27, 0.8);
+  --card-border: rgba(63, 63, 70, 0.5);
+  --accent: #ef4444;
+  --accent-hover: #dc2626;
+  --success: #22c55e;
+  --warning: #eab308;
+  --danger: #ef4444;
 }
 
 @theme inline {
@@ -12,15 +46,97 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Smooth theme transitions */
+html {
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* Premium scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--foreground-muted);
+}
+
+/* Selection styling */
+::selection {
+  background: rgba(220, 38, 38, 0.3);
+  color: var(--foreground);
+}
+
+/* Custom utility classes */
+.glass {
+  background: var(--card-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--card-border);
+}
+
+.glass-strong {
+  background: var(--card-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--card-border);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(10px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s ease-out;
+}
+
+/* Stagger animations for children */
+.stagger-children > * {
+  animation: slideUp 0.4s ease-out backwards;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.3s; }

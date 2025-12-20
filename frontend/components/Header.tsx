@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { ExchangeToggle } from './ExchangeToggle';
+import { ThemeToggle } from './ThemeToggle';
 import { Exchange } from '@/lib/types';
 import { useState, useEffect, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
@@ -252,6 +253,11 @@ export function Header({ exchange, onExchangeChange }: HeaderProps) {
                   exchange={exchange}
                   onExchangeChange={onExchangeChange}
                 />
+              </div>
+
+              {/* Theme Toggle */}
+              <div className="ml-2">
+                <ThemeToggle />
               </div>
             </nav>
 
