@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Header } from '@/components/Header';
 import { TechShowcase } from '@/components/TechShowcase';
+import { HowItWorks } from '@/components/HowItWorks';
+import { LiveAnomalyFeed } from '@/components/LiveAnomalyFeed';
 import { LiveStats } from '@/components/LiveStats';
 import { StatsCards } from '@/components/StatsCards';
 import { StockTable } from '@/components/StockTable';
@@ -69,6 +71,12 @@ export default function Home() {
         <div className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           {/* Tech Showcase - Hero Section for Recruiters */}
           <TechShowcase />
+
+          {/* How It Works - Pipeline Explanation */}
+          <HowItWorks />
+
+          {/* Live Anomaly Feed - Shows real-time detection */}
+          <LiveAnomalyFeed />
 
           {/* Live System Stats */}
           <LiveStats />

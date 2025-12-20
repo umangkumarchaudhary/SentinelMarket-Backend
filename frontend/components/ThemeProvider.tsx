@@ -91,9 +91,11 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     // Prevent flash by not rendering until mounted
     if (!mounted) {
         return (
-            <div className="min-h-screen bg-black">
-                {children}
-            </div>
+            <ThemeContext.Provider value={{ theme: 'system', setTheme: () => { }, resolvedTheme: 'dark' }}>
+                <div className="min-h-screen bg-black">
+                    {children}
+                </div>
+            </ThemeContext.Provider>
         );
     }
 
