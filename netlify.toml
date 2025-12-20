@@ -5,7 +5,7 @@
 
 [build.environment]
   NODE_VERSION = "20"
-  NEXT_PUBLIC_API_URL = "https://your-backend-name.onrender.com"
+  NEXT_PUBLIC_API_URL = "https://sentinelmarket-backend.onrender.com"
 
 # Netlify Next.js plugin - REQUIRED for Next.js 16 App Router
 [[plugins]]
