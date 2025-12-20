@@ -15,11 +15,16 @@ interface HeaderProps {
   onExchangeChange: (exchange: Exchange) => void;
 }
 
-const navItems = [
+// Main nav items (simple links)
+const mainNavItems = [
   { href: '/', label: 'Dashboard' },
   { href: '/alerts', label: 'Alerts' },
   { href: '/analytics', label: 'Analytics' },
   { href: '/social', label: 'Social' },
+];
+
+// Data Engineering dropdown items
+const dataEngNavItems = [
   { href: '/pipelines', label: 'Pipelines' },
   { href: '/data-quality', label: 'Quality' },
   { href: '/streams', label: 'Streams' },
@@ -46,11 +51,16 @@ const fallbackMarketData: MarketIndex[] = [
 export function Header({ exchange, onExchangeChange }: HeaderProps) {
   const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [dataEngDropdownOpen, setDataEngDropdownOpen] = useState(false);
+  const [mobileDataEngOpen, setMobileDataEngOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
   const [marketData, setMarketData] = useState<MarketIndex[]>(fallbackMarketData);
   const [marketStatus, setMarketStatus] = useState<'open' | 'closed'>('open');
   const [isLoading, setIsLoading] = useState(true);
   const pathname = usePathname();
+
+  // Check if current page is a Data Engineering page
+  const isDataEngPage = dataEngNavItems.some(item => pathname.startsWith(item.href));
 
   // Fetch market indices data
   const fetchMarketIndices = useCallback(async () => {
@@ -222,7 +232,8 @@ export function Header({ exchange, onExchangeChange }: HeaderProps) {
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center">
               <div className="flex items-center bg-zinc-900/50 rounded-2xl p-1.5 border border-zinc-800/50">
-                {navItems.map((item, index) => (
+                {/* Main Nav Items */}
+                {mainNavItems.map((item, index) => (
                   <Link
                     key={item.href}
                     href={item.href}
@@ -232,13 +243,64 @@ export function Header({ exchange, onExchangeChange }: HeaderProps) {
                       }`}
                     style={{ animation: mounted ? `fadeSlideIn 0.5s ease-out ${0.1 + index * 0.05}s backwards` : 'none' }}
                   >
-                    {/* Active Indicator Dot */}
                     {isActive(item.href) && (
                       <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-red-500 shadow-lg shadow-red-500/50" />
                     )}
                     {item.label}
                   </Link>
                 ))}
+
+                {/* Data Engineering Dropdown */}
+                <div
+                  className="relative"
+                  onMouseEnter={() => setDataEngDropdownOpen(true)}
+                  onMouseLeave={() => setDataEngDropdownOpen(false)}
+                >
+                  <button
+                    className={`relative px-4 py-2 rounded-xl text-[13px] font-semibold tracking-wide transition-all duration-300 flex items-center gap-1.5 ${isDataEngPage
+                      ? 'text-white bg-gradient-to-r from-red-600/20 to-red-700/10 shadow-sm'
+                      : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                      }`}
+                  >
+                    {isDataEngPage && (
+                      <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-red-500 shadow-lg shadow-red-500/50" />
+                    )}
+                    <span>📊</span> Data Eng
+                    <svg className={`w-3 h-3 transition-transform duration-200 ${dataEngDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  <div className={`absolute top-full left-0 mt-2 py-2 w-44 bg-zinc-900/98 backdrop-blur-xl border border-zinc-700/50 rounded-xl shadow-xl transition-all duration-200 ${dataEngDropdownOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'}`}>
+                    {dataEngNavItems.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`block px-4 py-2.5 text-sm font-medium transition-colors ${isActive(item.href)
+                          ? 'text-red-400 bg-red-500/10'
+                          : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'
+                          }`}
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+
+                {/* About Link */}
+                <Link
+                  href="/about"
+                  className={`relative px-4 py-2 rounded-xl text-[13px] font-semibold tracking-wide transition-all duration-300 ${isActive('/about')
+                    ? 'text-white bg-gradient-to-r from-red-600/20 to-red-700/10 shadow-sm'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                  {isActive('/about') && (
+                    <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-red-500 shadow-lg shadow-red-500/50" />
+                  )}
+                  About
+                </Link>
               </div>
 
               {/* Separator */}
@@ -291,7 +353,8 @@ export function Header({ exchange, onExchangeChange }: HeaderProps) {
 
             {/* Mobile Navigation Grid */}
             <div className="grid grid-cols-2 gap-2">
-              {navItems.map((item) => (
+              {/* Main Nav Items */}
+              {mainNavItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -304,7 +367,52 @@ export function Header({ exchange, onExchangeChange }: HeaderProps) {
                   {item.label}
                 </Link>
               ))}
+
+              {/* Data Engineering Accordion */}
+              <button
+                onClick={() => setMobileDataEngOpen(!mobileDataEngOpen)}
+                className={`relative px-4 py-3.5 rounded-xl text-sm font-semibold tracking-wide text-center transition-all duration-300 flex items-center justify-center gap-2 ${isDataEngPage
+                  ? 'text-white bg-gradient-to-r from-red-600/20 to-red-700/10 border border-red-500/20'
+                  : 'text-zinc-400 bg-zinc-800/30 border border-zinc-800/50 hover:text-white hover:bg-zinc-800/50'
+                  }`}
+              >
+                📊 Data Eng
+                <svg className={`w-3 h-3 transition-transform duration-200 ${mobileDataEngOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {/* About Link */}
+              <Link
+                href="/about"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`relative px-4 py-3.5 rounded-xl text-sm font-semibold tracking-wide text-center transition-all duration-300 ${isActive('/about')
+                  ? 'text-white bg-gradient-to-r from-red-600/20 to-red-700/10 border border-red-500/20'
+                  : 'text-zinc-400 bg-zinc-800/30 border border-zinc-800/50 hover:text-white hover:bg-zinc-800/50'
+                  }`}
+              >
+                About
+              </Link>
             </div>
+
+            {/* Data Engineering Sub-items (Accordion) */}
+            {mobileDataEngOpen && (
+              <div className="mt-2 grid grid-cols-2 gap-2 animate-in slide-in-from-top-2 duration-200">
+                {dataEngNavItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`px-4 py-2.5 rounded-lg text-sm font-medium text-center transition-all duration-300 ${isActive(item.href)
+                      ? 'text-red-400 bg-red-500/10 border border-red-500/30'
+                      : 'text-zinc-500 bg-zinc-800/20 border border-zinc-700/30 hover:text-zinc-300'
+                      }`}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            )}
 
             {/* Mobile Market Status */}
             <div className="mt-4 pt-4 border-t border-zinc-800/50 flex items-center justify-center gap-2">
