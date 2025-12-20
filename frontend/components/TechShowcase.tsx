@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 
 interface FeatureCard {
@@ -95,8 +95,237 @@ const features: FeatureCard[] = [
     },
 ];
 
+// Mobile Carousel Component
+function MobileCarousel({ features }: { features: FeatureCard[] }) {
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [isPaused, setIsPaused] = useState(false);
+
+    // Auto-rotate every 3 seconds
+    useEffect(() => {
+        if (isPaused) return;
+
+        const interval = setInterval(() => {
+            setCurrentIndex((prev) => (prev + 1) % features.length);
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [features.length, isPaused]);
+
+    const goToSlide = useCallback((index: number) => {
+        setCurrentIndex(index);
+        setIsPaused(true);
+        // Resume auto-play after 5 seconds of inactivity
+        setTimeout(() => setIsPaused(false), 5000);
+    }, []);
+
+    const feature = features[currentIndex];
+
+    return (
+        <div
+            className="relative"
+            onTouchStart={() => setIsPaused(true)}
+            onTouchEnd={() => setTimeout(() => setIsPaused(false), 5000)}
+        >
+            {/* Card Container with animation */}
+            <div className="relative overflow-hidden">
+                <div
+                    className="transition-all duration-500 ease-out"
+                    style={{
+                        transform: `translateX(-${currentIndex * 100}%)`,
+                        display: 'flex',
+                        width: `${features.length * 100}%`
+                    }}
+                >
+                    {features.map((f, idx) => (
+                        <div
+                            key={f.id}
+                            className="w-full flex-shrink-0 px-2"
+                            style={{ width: `${100 / features.length}%` }}
+                        >
+                            <Link href={f.link} className="block">
+                                <div
+                                    className="relative rounded-2xl p-5 min-h-[220px]"
+                                    style={{
+                                        background: 'var(--card-bg)',
+                                        border: '1px solid var(--card-border)',
+                                        backdropFilter: 'blur(12px)'
+                                    }}
+                                >
+                                    {/* Gradient overlay */}
+                                    <div className={`absolute inset-0 rounded-2xl opacity-50 bg-gradient-to-br ${f.bgGradient}`} />
+
+                                    <div className="relative">
+                                        {/* Icon */}
+                                        <div className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${f.color} text-white mb-4 shadow-lg`}>
+                                            {f.icon}
+                                        </div>
+
+                                        {/* Title */}
+                                        <h3 className="font-bold text-lg mb-1" style={{ color: 'var(--foreground)' }}>
+                                            {f.title}
+                                        </h3>
+                                        <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: 'var(--foreground-muted)' }}>
+                                            {f.subtitle}
+                                        </p>
+
+                                        {/* Stats */}
+                                        <div className="flex gap-6">
+                                            {f.stats.map((stat) => (
+                                                <div key={stat.label}>
+                                                    <p className="text-xl font-bold tabular-nums" style={{ color: 'var(--foreground)' }}>
+                                                        {stat.value}
+                                                    </p>
+                                                    <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--foreground-muted)' }}>
+                                                        {stat.label}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {/* Tap to explore hint */}
+                                        <p className="text-[10px] mt-3 flex items-center gap-1" style={{ color: 'var(--foreground-muted)' }}>
+                                            <span>Tap to explore</span>
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </p>
+                                    </div>
+                                </div>
+                            </Link>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Dots Navigation */}
+            <div className="flex justify-center items-center gap-2 mt-4">
+                {features.map((_, idx) => (
+                    <button
+                        key={idx}
+                        onClick={() => goToSlide(idx)}
+                        className={`transition-all duration-300 rounded-full ${idx === currentIndex
+                                ? 'w-6 h-2 bg-red-500'
+                                : 'w-2 h-2 bg-gray-600 hover:bg-gray-500'
+                            }`}
+                        aria-label={`Go to slide ${idx + 1}`}
+                    />
+                ))}
+            </div>
+
+            {/* Progress bar */}
+            <div className="mt-3 mx-auto max-w-[200px] h-1 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
+                <div
+                    className="h-full bg-gradient-to-r from-red-500 to-red-600 transition-all duration-300"
+                    style={{
+                        width: `${((currentIndex + 1) / features.length) * 100}%`,
+                    }}
+                />
+            </div>
+        </div>
+    );
+}
+
+// Desktop Card Component
+function DesktopCard({ feature, isExpanded, onClick }: { feature: FeatureCard; isExpanded: boolean; onClick: () => void }) {
+    return (
+        <div
+            className={`group relative rounded-2xl p-5 transition-all duration-500 cursor-pointer ${isExpanded ? 'sm:col-span-2 lg:col-span-2' : ''}`}
+            style={{
+                background: 'var(--card-bg)',
+                border: '1px solid var(--card-border)',
+                backdropFilter: 'blur(12px)'
+            }}
+            onClick={onClick}
+        >
+            {/* Gradient overlay on hover */}
+            <div className={`absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br ${feature.bgGradient}`} />
+
+            <div className="relative">
+                {/* Icon */}
+                <div className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${feature.color} text-white mb-4 shadow-lg`}>
+                    {feature.icon}
+                </div>
+
+                {/* Title */}
+                <h3 className="font-bold text-lg mb-1" style={{ color: 'var(--foreground)' }}>
+                    {feature.title}
+                </h3>
+                <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: 'var(--foreground-muted)' }}>
+                    {feature.subtitle}
+                </p>
+
+                {/* Stats */}
+                <div className="flex gap-4 mb-3">
+                    {feature.stats.map((stat) => (
+                        <div key={stat.label}>
+                            <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--foreground)' }}>
+                                {stat.value}
+                            </p>
+                            <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--foreground-muted)' }}>
+                                {stat.label}
+                            </p>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Expanded Content */}
+                {isExpanded && (
+                    <div className="animate-fade-in mt-4 pt-4 border-t" style={{ borderColor: 'var(--border)' }}>
+                        <p className="text-sm mb-4" style={{ color: 'var(--foreground-secondary)' }}>
+                            {feature.description}
+                        </p>
+
+                        {/* Tech Stack */}
+                        <div className="flex flex-wrap gap-2 mb-4">
+                            {feature.techStack.map((tech) => (
+                                <span
+                                    key={tech}
+                                    className="px-2 py-1 rounded-md text-xs font-medium"
+                                    style={{ background: 'var(--background-tertiary)', color: 'var(--foreground-secondary)' }}
+                                >
+                                    {tech}
+                                </span>
+                            ))}
+                        </div>
+
+                        <Link
+                            href={feature.link}
+                            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-gradient-to-r ${feature.color} transition-transform hover:scale-105`}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            Explore
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                        </Link>
+                    </div>
+                )}
+
+                {/* Click hint */}
+                {!isExpanded && (
+                    <p
+                        className="text-[10px] mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ color: 'var(--foreground-muted)' }}
+                    >
+                        Click to expand →
+                    </p>
+                )}
+            </div>
+        </div>
+    );
+}
+
 export function TechShowcase() {
     const [expandedCard, setExpandedCard] = useState<string | null>(null);
+    const [isMobile, setIsMobile] = useState(false);
+
+    // Detect mobile on mount and resize
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 640);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     return (
         <div className="relative overflow-hidden rounded-3xl mb-8">
@@ -146,116 +375,21 @@ export function TechShowcase() {
                     </p>
                 </div>
 
-                {/* Feature Cards Grid */}
-                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {features.map((feature) => (
-                        <div
-                            key={feature.id}
-                            className={`group relative rounded-2xl p-5 transition-all duration-500 cursor-pointer ${expandedCard === feature.id ? 'sm:col-span-2 lg:col-span-2' : ''
-                                }`}
-                            style={{
-                                background: 'var(--card-bg)',
-                                border: '1px solid var(--card-border)',
-                                backdropFilter: 'blur(12px)'
-                            }}
-                            onClick={() => setExpandedCard(expandedCard === feature.id ? null : feature.id)}
-                        >
-                            {/* Gradient overlay on hover */}
-                            <div
-                                className={`absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br ${feature.bgGradient}`}
+                {/* Mobile: Carousel | Desktop: Grid */}
+                {isMobile ? (
+                    <MobileCarousel features={features} />
+                ) : (
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {features.map((feature) => (
+                            <DesktopCard
+                                key={feature.id}
+                                feature={feature}
+                                isExpanded={expandedCard === feature.id}
+                                onClick={() => setExpandedCard(expandedCard === feature.id ? null : feature.id)}
                             />
-
-                            <div className="relative">
-                                {/* Icon */}
-                                <div
-                                    className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${feature.color} text-white mb-4 shadow-lg`}
-                                >
-                                    {feature.icon}
-                                </div>
-
-                                {/* Title */}
-                                <h3
-                                    className="font-bold text-lg mb-1"
-                                    style={{ color: 'var(--foreground)' }}
-                                >
-                                    {feature.title}
-                                </h3>
-                                <p
-                                    className="text-xs font-medium uppercase tracking-wider mb-3"
-                                    style={{ color: 'var(--foreground-muted)' }}
-                                >
-                                    {feature.subtitle}
-                                </p>
-
-                                {/* Stats */}
-                                <div className="flex gap-4 mb-3">
-                                    {feature.stats.map((stat) => (
-                                        <div key={stat.label}>
-                                            <p
-                                                className="text-lg font-bold tabular-nums"
-                                                style={{ color: 'var(--foreground)' }}
-                                            >
-                                                {stat.value}
-                                            </p>
-                                            <p
-                                                className="text-[10px] uppercase tracking-wider"
-                                                style={{ color: 'var(--foreground-muted)' }}
-                                            >
-                                                {stat.label}
-                                            </p>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {/* Expanded Content */}
-                                {expandedCard === feature.id && (
-                                    <div className="animate-fade-in mt-4 pt-4 border-t" style={{ borderColor: 'var(--border)' }}>
-                                        <p
-                                            className="text-sm mb-4"
-                                            style={{ color: 'var(--foreground-secondary)' }}
-                                        >
-                                            {feature.description}
-                                        </p>
-
-                                        {/* Tech Stack */}
-                                        <div className="flex flex-wrap gap-2 mb-4">
-                                            {feature.techStack.map((tech) => (
-                                                <span
-                                                    key={tech}
-                                                    className="px-2 py-1 rounded-md text-xs font-medium"
-                                                    style={{ background: 'var(--background-tertiary)', color: 'var(--foreground-secondary)' }}
-                                                >
-                                                    {tech}
-                                                </span>
-                                            ))}
-                                        </div>
-
-                                        <Link
-                                            href={feature.link}
-                                            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-gradient-to-r ${feature.color} transition-transform hover:scale-105`}
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
-                                            Explore
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                            </svg>
-                                        </Link>
-                                    </div>
-                                )}
-
-                                {/* Click hint */}
-                                {expandedCard !== feature.id && (
-                                    <p
-                                        className="text-[10px] mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        style={{ color: 'var(--foreground-muted)' }}
-                                    >
-                                        Click to expand →
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                )}
 
                 {/* Bottom CTA */}
                 <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -280,3 +414,4 @@ export function TechShowcase() {
         </div>
     );
 }
+
