@@ -633,8 +633,11 @@ async def get_stock_detail(
         
         # Fetch data
         data = fetcher.fetch_historical_data(ticker, period=period)
+        # Fetch data
+        data = fetcher.fetch_historical_data(ticker, period=period)
         if data is None or data.empty:
-            raise HTTPException(status_code=404, detail=f"Stock {ticker} not found or no data available")
+            # Instead of 404, raise generic exception to trigger fallback
+            raise ValueError(f"Stock {ticker} not found or no data available")
         
         # Calculate risk score for current data
         risk_result = risk_scorer.calculate_risk_score(data, ticker)
@@ -750,8 +753,6 @@ async def get_stock_detail(
             "last_updated": datetime.now().isoformat()
         }
     
-    except HTTPException:
-        raise
     except Exception as e:
         # Fallback to mock data if real analysis fails
         print(f"[WARNING] Analysis failed for {ticker}, returning mock data: {e}")
@@ -833,8 +834,10 @@ async def get_stock_history(
         
         # Fetch data
         data = fetcher.fetch_historical_data(ticker, period=period)
+        # Fetch data
+        data = fetcher.fetch_historical_data(ticker, period=period)
         if data is None or data.empty:
-            raise HTTPException(status_code=404, detail=f"Stock {ticker} not found or no data available")
+            raise ValueError(f"Stock {ticker} not found or no data available")
         
         # Prepare history data
         history = []
@@ -856,8 +859,6 @@ async def get_stock_history(
             "count": len(history)
         }
     
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching history: {str(e)}")
 
@@ -1319,8 +1320,10 @@ async def explain_stock_risk(
         
         # Fetch data
         data = fetcher.fetch_historical_data(ticker, period=period)
+        # Fetch data
+        data = fetcher.fetch_historical_data(ticker, period=period)
         if data is None or data.empty:
-            raise HTTPException(status_code=404, detail=f"Stock {ticker} not found")
+            raise ValueError(f"Stock {ticker} not found")
         
         # Calculate risk score with details
         risk_result = risk_scorer.calculate_risk_score(data, ticker)
@@ -1367,8 +1370,6 @@ async def explain_stock_risk(
             "ml_status": ml_status,
             "last_updated": datetime.now().isoformat()
         }
-    except HTTPException:
-        raise
     except Exception as e:
         # Fallback mock data
         print(f"[WARNING] Explanation failed for {ticker}, returning mock data")
@@ -1413,9 +1414,10 @@ async def match_patterns(
             fetcher = fetcher_nse
         
         # Fetch data
+        # Fetch data
         data = fetcher.fetch_historical_data(ticker, period=period)
         if data is None or data.empty:
-            raise HTTPException(status_code=404, detail=f"Stock {ticker} not found")
+            raise ValueError(f"Stock {ticker} not found")
         
         # Calculate risk score
         risk_result = risk_scorer.calculate_risk_score(data, ticker)
@@ -1470,8 +1472,6 @@ async def match_patterns(
             "warning": "High similarity to historical pump-and-dump pattern" if similarity_score > 75 else None,
             "last_updated": datetime.now().isoformat()
         }
-    except HTTPException:
-        raise
     except Exception as e:
         # Fallback mock data
         print(f"[WARNING] Pattern match failed for {ticker}, returning mock data")
@@ -1522,9 +1522,10 @@ async def predict_crash(
             fetcher = fetcher_nse
         
         # Fetch data
+        # Fetch data
         data = fetcher.fetch_historical_data(ticker, period="6mo")
         if data is None or data.empty:
-            raise HTTPException(status_code=404, detail=f"Stock {ticker} not found")
+            raise ValueError(f"Stock {ticker} not found")
         
         # Calculate risk score
         risk_result = risk_scorer.calculate_risk_score(data, ticker)
@@ -1572,8 +1573,6 @@ async def predict_crash(
             },
             "last_updated": datetime.now().isoformat()
         }
-    except HTTPException:
-        raise
     except Exception as e:
         # Fallback mock data
         print(f"[WARNING] Prediction failed for {ticker}, returning mock data")
