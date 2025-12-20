@@ -370,6 +370,14 @@ async def get_stocks(
     """
     try:
         # Ensure limit and offset are integers (FastAPI Query objects)
+        # Defensive check: if called internally without arguments, they might be Query objects
+        from fastapi.params import Query as QueryParam
+        
+        if isinstance(limit, QueryParam):
+            limit = limit.default
+        if isinstance(offset, QueryParam):
+            offset = offset.default
+            
         limit_int = int(limit) if limit is not None else 100
         offset_int = int(offset) if offset is not None else 0
         
@@ -874,7 +882,9 @@ async def get_alerts(
         stocks_response = await get_stocks(
             exchange=exchange_param,
             risk_level=risk_level or "high",
-            limit=limit
+            limit=limit,
+            offset=0,
+            use_db=False
         )
         
         alerts = []
@@ -932,7 +942,13 @@ async def get_analytics(
 
     try:
         # Get all stocks (via the same logic as /api/stocks)
-        stocks_response = await get_stocks(exchange=exchange, limit=500)
+        stocks_response = await get_stocks(
+            exchange=exchange, 
+            limit=500,
+            offset=0,
+            use_db=False,
+            risk_level=None
+        )
         stocks = stocks_response.get("stocks", [])
         exchange_name = stocks_response.get("exchange", (exchange or "NSE").upper())
 
