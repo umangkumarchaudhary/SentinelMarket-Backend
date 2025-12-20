@@ -2,7 +2,8 @@
  * API Client for SentinelMarket Backend
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sentinelmarket-backend.onrender.com';
+
 
 export interface Stock {
   ticker: string;

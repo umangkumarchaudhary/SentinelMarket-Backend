@@ -269,6 +269,87 @@ async def health_check():
     }
 
 
+@app.get("/api/market-indices")
+async def get_market_indices():
+    """
+    Get real-time market indices data (NIFTY 50, SENSEX, BANK NIFTY, NIFTY IT)
+    Used for the header ticker display
+    """
+    import yfinance as yf
+    
+    # Define indices with their Yahoo Finance symbols
+    indices = [
+        {"symbol": "^NSEI", "name": "NIFTY 50"},
+        {"symbol": "^BSESN", "name": "SENSEX"},
+        {"symbol": "^NSEBANK", "name": "BANK NIFTY"},
+        {"symbol": "^CNXIT", "name": "NIFTY IT"},
+    ]
+    
+    results = []
+    
+    for index in indices:
+        try:
+            ticker = yf.Ticker(index["symbol"])
+            # Get current day's data
+            hist = ticker.history(period="2d")
+            
+            if hist is not None and len(hist) >= 1:
+                current_price = float(hist['Close'].iloc[-1])
+                
+                # Calculate change from previous close
+                if len(hist) >= 2:
+                    prev_close = float(hist['Close'].iloc[-2])
+                else:
+                    # Use today's open if we don't have yesterday's close
+                    prev_close = float(hist['Open'].iloc[-1])
+                
+                change = current_price - prev_close
+                change_percent = (change / prev_close) * 100 if prev_close > 0 else 0
+                
+                results.append({
+                    "symbol": index["name"],
+                    "value": round(current_price, 2),
+                    "change": round(change, 2),
+                    "change_percent": round(change_percent, 2),
+                    "positive": change_percent >= 0
+                })
+            else:
+                # No data available - skip this index
+                continue
+                
+        except Exception as e:
+            print(f"[MARKET] Error fetching {index['name']}: {e}")
+            continue
+    
+    # If no real data available, return realistic demo data
+    if len(results) == 0:
+        print("[MARKET] Using demo data for market indices")
+        import random
+        demo_indices = [
+            {"symbol": "NIFTY 50", "base": 24850, "range": 200},
+            {"symbol": "SENSEX", "base": 82100, "range": 500},
+            {"symbol": "BANK NIFTY", "base": 53200, "range": 300},
+            {"symbol": "NIFTY IT", "base": 44800, "range": 400},
+        ]
+        for idx in demo_indices:
+            change_percent = random.uniform(-1.5, 1.5)
+            value = idx["base"] + random.uniform(-idx["range"], idx["range"])
+            results.append({
+                "symbol": idx["symbol"],
+                "value": round(value, 2),
+                "change": round(value * change_percent / 100, 2),
+                "change_percent": round(change_percent, 2),
+                "positive": change_percent >= 0,
+                "demo": True
+            })
+    
+    return {
+        "indices": results,
+        "timestamp": datetime.now().isoformat(),
+        "market_status": "open" if 9 <= datetime.now().hour < 16 else "closed"
+    }
+
+
 @app.get("/api/stocks")
 async def get_stocks(
     exchange: Optional[str] = Query(None, description="Exchange: 'nse' or 'bse'"),
