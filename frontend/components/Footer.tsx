@@ -35,7 +35,7 @@ export function Footer() {
                     {/* Links */}
                     <div className="flex items-center gap-6">
                         <a
-                            href="https://github.com/umangkumarchaudhary"
+                            href="https://github.com/umangkumarchaudhary/SentinelMarket-Backend"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-2 text-sm font-medium transition-colors hover:opacity-80"
@@ -48,7 +48,7 @@ export function Footer() {
                         </a>
 
                         <a
-                            href="https://linkedin.com/in/umangkumarchaudhary"
+                            href="https://www.linkedin.com/in/umang-kumar-0546b71b5/"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-2 text-sm font-medium transition-colors hover:opacity-80"

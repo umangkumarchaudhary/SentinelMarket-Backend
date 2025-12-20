@@ -42,6 +42,7 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
+database/
 
 # Data Lake
 data_lake/
@@ -54,3 +55,17 @@ logs/
 # Temporary files
 *.tmp
 *.temp
+
+# Internal Documentation - Keep private
+*_GUIDE.md
+*_PLAN.md
+*_FIX.md
+*_SUMMARY.md
+*_PREPARATION.md
+QUICK_*.md
+QUICK_*.txt
+SWITCH_*.md
+test_api.py
+
+# SentinelMarket old directory
+SentinelMarket/
