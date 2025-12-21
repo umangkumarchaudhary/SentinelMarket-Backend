@@ -235,6 +235,28 @@ async def startup_event():
         print(f"✅ [Startup] UPDATED Telegram monitor channels to: {telegram_monitor.default_channels}")
         print(f"🔍 [Startup] Telegram monitor configured: {telegram_monitor.is_configured}")
 
+# Root endpoint with HEAD support for uptime monitors
+@app.api_route("/", methods=["GET", "HEAD"])
+async def root():
+    """Root endpoint - health check for uptime monitors"""
+    return {
+        "service": "SentinelMarket API",
+        "status": "healthy",
+        "version": "1.0.0"
+    }
+
+# Health endpoint with HEAD support for uptime monitors
+@app.api_route("/health", methods=["GET", "HEAD"])
+async def health_check():
+    """Health check endpoint for uptime monitors (supports GET and HEAD)"""
+    return {
+        "status": "healthy",
+        "database": "connected" if DB_AVAILABLE else "not configured",
+        "ml_modules": "available" if ML_MODULES_AVAILABLE else "fallback",
+        "social_monitoring": "available" if SOCIAL_AVAILABLE else "not available",
+        "data_engineering": "available" if DATA_ENGINEERING_AVAILABLE else "not available"
+    }
+
 # Popular NSE and BSE stocks for demo
 POPULAR_NSE_STOCKS = [
     "RELIANCE", "TCS", "HDFCBANK", "INFY", "HINDUNILVR", "ICICIBANK",
