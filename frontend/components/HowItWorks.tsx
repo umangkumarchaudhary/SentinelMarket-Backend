@@ -87,19 +87,11 @@ export function HowItWorks() {
                         )}
 
                         <div className="relative flex flex-col items-center text-center">
-                            {/* Number badge */}
+                            {/* Number badge - now the main visual element */}
                             <div
-                                className="absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white z-10"
-                                style={{ background: 'var(--accent)' }}
+                                className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${step.color} flex items-center justify-center text-xl font-bold text-white mb-3 shadow-lg transform group-hover:scale-110 transition-transform duration-300`}
                             >
                                 {step.number}
-                            </div>
-
-                            {/* Icon container */}
-                            <div
-                                className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${step.color} flex items-center justify-center text-white mb-3 shadow-lg transform group-hover:scale-110 transition-transform duration-300`}
-                            >
-                                {step.icon}
                             </div>
 
                             {/* Title */}

@@ -129,22 +129,17 @@ function MobileCarousel({ features }: { features: FeatureCard[] }) {
             {/* Card Container with animation */}
             <div className="relative overflow-hidden">
                 <div
-                    className="transition-all duration-500 ease-out"
-                    style={{
-                        transform: `translateX(-${currentIndex * 100}%)`,
-                        display: 'flex',
-                        width: `${features.length * 100}%`
-                    }}
+                    className="transition-all duration-500 ease-out flex"
+                    style={{ transform: `translateX(-${currentIndex * 100}%)` }}
                 >
-                    {features.map((f, idx) => (
+                    {features.map((f) => (
                         <div
                             key={f.id}
                             className="w-full flex-shrink-0 px-2"
-                            style={{ width: `${100 / features.length}%` }}
                         >
                             <Link href={f.link} className="block">
                                 <div
-                                    className="relative rounded-2xl p-5 min-h-[220px]"
+                                    className="relative rounded-2xl p-5 min-h-[180px]"
                                     style={{
                                         background: 'var(--card-bg)',
                                         border: '1px solid var(--card-border)',
@@ -154,25 +149,20 @@ function MobileCarousel({ features }: { features: FeatureCard[] }) {
                                     {/* Gradient overlay */}
                                     <div className={`absolute inset-0 rounded-2xl opacity-50 bg-gradient-to-br ${f.bgGradient}`} />
 
-                                    <div className="relative">
-                                        {/* Icon */}
-                                        <div className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${f.color} text-white mb-4 shadow-lg`}>
-                                            {f.icon}
-                                        </div>
-
+                                    <div className="relative text-center">
                                         {/* Title */}
                                         <h3 className="font-bold text-lg mb-1" style={{ color: 'var(--foreground)' }}>
                                             {f.title}
                                         </h3>
-                                        <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: 'var(--foreground-muted)' }}>
+                                        <p className="text-xs font-medium uppercase tracking-wider mb-4" style={{ color: 'var(--foreground-muted)' }}>
                                             {f.subtitle}
                                         </p>
 
                                         {/* Stats */}
-                                        <div className="flex gap-6">
+                                        <div className="flex justify-center gap-8">
                                             {f.stats.map((stat) => (
                                                 <div key={stat.label}>
-                                                    <p className="text-xl font-bold tabular-nums" style={{ color: 'var(--foreground)' }}>
+                                                    <p className="text-2xl font-bold tabular-nums" style={{ color: 'var(--foreground)' }}>
                                                         {stat.value}
                                                     </p>
                                                     <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--foreground-muted)' }}>
@@ -183,7 +173,7 @@ function MobileCarousel({ features }: { features: FeatureCard[] }) {
                                         </div>
 
                                         {/* Tap to explore hint */}
-                                        <p className="text-[10px] mt-3 flex items-center gap-1" style={{ color: 'var(--foreground-muted)' }}>
+                                        <p className="text-[10px] mt-4 flex items-center justify-center gap-1" style={{ color: 'var(--foreground-muted)' }}>
                                             <span>Tap to explore</span>
                                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -204,8 +194,8 @@ function MobileCarousel({ features }: { features: FeatureCard[] }) {
                         key={idx}
                         onClick={() => goToSlide(idx)}
                         className={`transition-all duration-300 rounded-full ${idx === currentIndex
-                                ? 'w-6 h-2 bg-red-500'
-                                : 'w-2 h-2 bg-gray-600 hover:bg-gray-500'
+                            ? 'w-6 h-2 bg-red-500'
+                            : 'w-2 h-2 bg-gray-600 hover:bg-gray-500'
                             }`}
                         aria-label={`Go to slide ${idx + 1}`}
                     />
