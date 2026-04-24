@@ -52,7 +52,7 @@ const fallbackAlerts: AnomalyAlert[] = [
     },
 ];
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sentinelmarket-backend.onrender.com';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sentinelmarket-backend-7aar.onrender.com';
 
 const getSeverityStyles = (riskLevel: string, riskScore: number) => {
     // Determine severity based on risk level and score

@@ -2,7 +2,7 @@
  * API Client for SentinelMarket Backend
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sentinelmarket-backend.onrender.com';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sentinelmarket-backend-7aar.onrender.com';
 
 
 export interface Stock {

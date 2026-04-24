@@ -2,7 +2,7 @@
 // Add these to api.ts or import from here
 
 // Define API base URL (same as in api.ts)
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sentinelmarket-backend.onrender.com';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sentinelmarket-backend-7aar.onrender.com';
 
 export interface Pipeline {
   name: string;

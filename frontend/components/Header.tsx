@@ -7,7 +7,7 @@ import { Exchange } from '@/lib/types';
 import { useState, useEffect, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sentinelmarket-backend.onrender.com';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sentinelmarket-backend-7aar.onrender.com';
 
 
 interface HeaderProps {

@@ -10,7 +10,7 @@ interface Stat {
     icon: React.ReactNode;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sentinelmarket-backend.onrender.com';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sentinelmarket-backend-7aar.onrender.com';
 
 // Animated counter hook
 function useAnimatedCounter(target: number, duration: number = 2000) {
