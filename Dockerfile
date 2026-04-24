@@ -18,6 +18,7 @@ RUN pip install --upgrade pip setuptools wheel && \
 
 # Copy application code
 COPY backend/ .
+COPY SentinelMarket/ /SentinelMarket/
 
 # Expose port
 EXPOSE 8000
