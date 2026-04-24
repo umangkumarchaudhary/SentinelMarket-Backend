@@ -369,10 +369,15 @@ async def get_market_indices():
                 "demo": True
             })
     
+    import pytz
+    ist_time = datetime.now(pytz.timezone('Asia/Kolkata'))
+    # Indian markets are open Mon-Fri (weekday < 5) roughly 9 AM to 4 PM IST
+    is_open = 9 <= ist_time.hour < 16 and ist_time.weekday() < 5
+    
     return {
         "indices": results,
-        "timestamp": datetime.now().isoformat(),
-        "market_status": "open" if 9 <= datetime.now().hour < 16 else "closed"
+        "timestamp": ist_time.isoformat(),
+        "market_status": "open" if is_open else "closed"
     }
 
 
